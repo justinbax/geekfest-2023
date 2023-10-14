@@ -6,20 +6,22 @@ import { NavigationClient } from '@azure/msal-browser'
 
 const unmatched = '/:pathMatch(.*)*'
 const unguarded = [
-  '/',
   '/login',
   '/logout',
   '/signin',
-  '/welcome'
 ]
 
 const routes = [
   {
     path: '/',
     component: () => import('@/layouts/default/Default.vue'),
-    children: [
-      {
+    children: [ {
         path: '',
+        name: 'Start',
+        redirect: 'home'
+      },
+      {
+        path: 'home',
         name: 'Home',
         // route level code-splitting
         // this generates a separate chunk (about.[hash].js) for this route
@@ -27,9 +29,9 @@ const routes = [
         component: () => import(/* webpackChunkName: "home" */ '@/views/Home.vue'),
       },
       {
-        path: 'welcome',
-        name: 'Welcome Page',
-        component: () => import(/* webpackChunkName: "home" */ '@/views/Welcome.vue'),
+        path: 'login',
+        name: 'Login Page',
+        component: () => import(/* webpackChunkName: "login" */ '@/views/Login.vue'),
       }
     ],
   },
@@ -58,16 +60,15 @@ router.beforeEach(async (to, from, next) => {
   const guarded = unguarded.every(path => path !== to.path)
   if (guarded) {
     // initialized
-    if (!auth.initialized) {
-      await auth.initialize(client)
-    }
+    await auth.initialize(client)
+
 
     // authorised
     if (auth.account) {
       return next()
     }
     // unauthorised
-    return next({path: '/app/login', query: {
+    return next({path: '/login', query: {
       redirectPath: encodeURIComponent(to.fullPath)
     }})
   }

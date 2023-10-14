@@ -22,13 +22,13 @@
         {
             title: "Home",
             value: 0,
-            path: "/",
+            path: "/home",
             icon: "mdi-home"
         },
         {
             title: "Login",
             value: 1,
-            path: "/welcome",
+            path: "/login",
             icon: "mdi-lock"
         },
     ])
