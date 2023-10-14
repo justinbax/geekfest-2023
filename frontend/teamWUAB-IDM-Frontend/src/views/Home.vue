@@ -1,7 +1,7 @@
 <template>
-  <HelloWorld />
+  <UserDashboard />
 </template>
 
 <script lang="ts" setup>
-  import HelloWorld from '@/components/HelloWorld.vue'
+  import UserDashboard from '@/components/UserDashboard.vue'
 </script>

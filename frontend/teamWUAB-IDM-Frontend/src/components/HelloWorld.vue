@@ -72,4 +72,6 @@
 
 <script lang="ts" setup>
   //
+  let a: number = 1
+  
 </script>
