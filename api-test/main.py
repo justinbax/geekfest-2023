@@ -336,7 +336,7 @@ def receive_requests():
     analysis += gpt_response
 
     # TODO right now we don't check if resource is in requestable_resources because, with the UI, it should always be. but probably better idea to check
-    perm_request = PermissionRequest(user, resource, reason, duration, ip, analysis)
+    perm_request = PermissionRequest(user.uid, resource, reason, duration, ip, analysis)
     user.sent_requests.append(perm_request)
 
 
