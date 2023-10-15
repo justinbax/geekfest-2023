@@ -16,18 +16,13 @@ class PermissionStatus(Enum):
 
 
 def get_current_time():
-    # TODO this
     return int(time.time())
 
+def get_location():
+    return 0
 
 def decode_token(jwtoken):
-    # TODO this
-    result = {
-        'email': 'arch@btw.com',
-        'given_name': 'joe',
-        'family_name': 'mama'
-    }
-    return result
+    return authValidate.validate_auth_token(jwtoken)
 
 
 def user_from_uid(uid):
@@ -96,7 +91,7 @@ class PermissionRequest:
 
 # TODO create actual users
 some_perms = [Permission('arch', 'something', None, 1234)]
-users = [User('test', [], [], [])]
+users = [User('eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiIsIng1dCI6IjlHbW55RlBraGMzaE91UjIybXZTdmduTG83WSIsImtpZCI6IjlHbW55RlBraGMzaE91UjIybXZTdmduTG83WSJ9.eyJhdWQiOiJhcGk6Ly84NGY2YzEyYS0xMmJmLTRmZDAtOTFiYy0yZGZiMzBlY2FkZWEiLCJpc3MiOiJodHRwczovL3N0cy53aW5kb3dzLm5ldC80ZWE0M2U4YS0xMzJlLTQ4YzAtOTAxZC01MmRkMjJlN2NkZjMvIiwiaWF0IjoxNjk3MzQ0ODIxLCJuYmYiOjE2OTczNDQ4MjEsImV4cCI6MTY5NzM0OTAwOSwiYWNyIjoiMSIsImFpbyI6IkFhUUFXLzhVQUFBQVlDRXRJZjlzK0oydEpSTWtuUXZ6UUJRRmpDUjQ4R1UyR2ZtaUZhTU8zU0xCaThWcGYvK2hnTmRNQitJVlFXK2tjZm5EL2R2OXJPRTBlMjlxV25HS2o1M1Nkb1h5MG9MYnYzWi9rZHhocWF0YloyeWdtZUtwSmFqUlV0ejdmb1B6b0thT3AwYlVJeWNJSEF3L2ZFV3VxRWFhSVVSenl5OUVmaWptM3hJT204RVFtS2EwOEU1WERXdU5ubS9WUXRWRXlIcVVqQng2U1lEQXlFakFndDBCelE9PSIsImFtciI6WyJwd2QiLCJtZmEiXSwiYXBwaWQiOiI4NGY2YzEyYS0xMmJmLTRmZDAtOTFiYy0yZGZiMzBlY2FkZWEiLCJhcHBpZGFjciI6IjAiLCJlbWFpbCI6ImNocmlzeXg1MTFAb3V0bG9vay5jb20iLCJmYW1pbHlfbmFtZSI6IllhbmciLCJnaXZlbl9uYW1lIjoiQ2hyaXMiLCJpZHAiOiJsaXZlLmNvbSIsImlwYWRkciI6IjY1LjM4LjcwLjIzOCIsIm5hbWUiOiJDaHJpcyBZYW5nIiwib2lkIjoiODExMDQ3MzUtMGIzYi00NTQzLTg2YzYtZmEwMDk2NTFjNjM3IiwicmgiOiIwLkFiMEFpajZrVGk0VHdFaVFIVkxkSXVmTjh5ckI5b1NfRXRCUGtid3QtekRzcmVxOUFNOC4iLCJzY3AiOiJBY2Nlc3NQZXJtcyIsInN1YiI6IlFFYTJsb1FVdmpXcTJyZFBVVldQeWtDUFNMX2F5OHBGMHk2ajdYdF85QUEiLCJ0aWQiOiI0ZWE0M2U4YS0xMzJlLTQ4YzAtOTAxZC01MmRkMjJlN2NkZjMiLCJ1bmlxdWVfbmFtZSI6ImxpdmUuY29tI2NocmlzeXg1MTFAb3V0bG9vay5jb20iLCJ1dGkiOiJKZU5ZdjRtczZFT0E4LWt3Y1pJYUFBIiwidmVyIjoiMS4wIn0.aBjyREERbQ2EdzsyOsAF59liEzWbgphI99DlTAYD3QPhJiWnq1TjnHeVyiVsgQzDVLwMD-lp7shvFi_OcTyaWeUt4AfZ2HaAh51PvCQFVYINXaJow2L-C6hLnmJQciraJAB0e9uZA5zHikQQQ3fHr50kw5_NkrCbp7TZoQLJa-sDP_FnqsXNcANH_EkgfE2joELjtqwaFDAb_5pldbcLQy0DAvzj9ZIJ7fgBFWD7ZxiUQ0MlWb2gxIoMJYI2DcoXMMzbpflSBB1xwW7uaLv_1ZKKip2ybYndUKG97g3zu34GTMtz9zLTRjgSWkWyoEBxJvv4Bq7yNA-fOW-TJAcXNA', [], [], [])]
 users[0].active_perms = some_perms
 
 
@@ -130,7 +125,9 @@ def review_request():
     expiry = get_current_time() + expiry_mins * 60
 
     # TODO Have actual error handling lmao
-    request_reviewed = search_requests_for_id(user, request_id)
+    request_reviewed = search_requests_for_id(user.received_requests, request_id)
+    print(request_reviewed)
+    print(user.received_requests[0])
     user.received_requests.remove(request_reviewed)
 
     request_reviewed.requester.sent_requests.remove(request_reviewed)
@@ -216,3 +213,17 @@ def receive_requests():
         # Ask co-supervisors
         for co in user.co_supervisors:
             co.received_requests.append(perm_request)
+
+    # TODO REMOVE THIS REMOVE THIS REMOVE THIS
+    # TODO REMOVE THIS REMOVE THIS REMOVE THIS
+    # TODO REMOVE THIS REMOVE THIS REMOVE THIS
+    user.received_requests.append(perm_request)
+    # TODO REMOVE THIS REMOVE THIS REMOVE THIS
+    # TODO REMOVE THIS REMOVE THIS REMOVE THIS
+    # TODO REMOVE THIS REMOVE THIS REMOVE THIS
+    # TODO REMOVE THIS REMOVE THIS REMOVE THIS
+    # TODO REMOVE THIS REMOVE THIS REMOVE THIS
+
+    return jsonify({
+        'status': 'PENDING'
+    })
