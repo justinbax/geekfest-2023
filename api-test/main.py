@@ -1,5 +1,5 @@
 from enum import Enum
-import datetime as dt
+import time
 from flask import Flask, jsonify, request
 import requests
 import json
@@ -14,8 +14,38 @@ class PermissionStatus(Enum):
     DENIED = 2
 
 
+def get_current_time():
+    # TODO this
+    return int(time.time())
+
+
+def decode_token(jwtoken):
+    # TODO this
+    result = {
+        'email': 'arch@btw.com',
+        'given_name': 'joe',
+        'family_name': 'mama'
+    }
+    return result
+
+
+def user_from_uid(uid):
+    for u in users:
+        if u.uid == uid:
+            return u
+    return None
+
+
+def search_permissions_for_resource(permissions, resource):
+    for perm in permissions:
+        if perm.resource == resource:
+            return perm
+    return None
+
+
 class User:
-    def __init__(self, jwtoken, persistent_perms, requestable_resources, supervisors, can_recieve_requests=True, co_supervisors=[]):
+    def __init__(self, jwtoken, persistent_perms, requestable_resources, supervisors, can_receive_requests=True,
+                 co_supervisors=[]):
         token_content = decode_token(jwtoken)
         # TODO maybe use field 'sub' as uid
         self.uid = token_content['email']
@@ -28,9 +58,9 @@ class User:
         self.supervisors = supervisors
         self.co_supervisors = co_supervisors
         self.sent_requests = []
-        self.recieved_requests = []
+        self.received_requests = []
         self.has_co_supervisors = len(co_supervisors) > 0
-        self.can_recieve_requests = can_recieve_requests
+        self.can_receive_requests = can_receive_requests
 
 
 class Permission:
@@ -58,39 +88,10 @@ class PermissionRequest:
 
 
 # TODO create actual users
-users = []
+users = [User('test', [], [], [])]
 
 
-def get_current_time():
-    # TODO this
-    return 0
-
-
-def decode_token(jwtoken):
-    # TODO this
-    result = {
-        'email': 'arch@btw.com',
-        'given_name': 'joe',
-        'family_name': 'mama'
-    }
-    return result
-
-
-def user_from_uid(uid):
-    for u in users:
-        if u.uid == uid:
-            return u
-    return None
-
-
-def search_permissions_for_resource(permissions, resource):
-    for perm in permissions:
-        if perm.resource == resource:
-            return perm
-    return None
-
-
-@app.route('/show', methods=['GET',])
+@app.route('/show', methods=['GET', ])
 def get_user_data():
     # TODO this
 
@@ -100,7 +101,7 @@ def get_user_data():
     token_contents = decode_token(jwtoken)
     user = user_from_uid(token_contents['email'])
 
-    return user
+    return jsonify({'user': user.__dict__})
 
 
 @app.route('/review', methods=['POST'])
@@ -124,6 +125,7 @@ def check_permission():
         return "ACTIVE" + Permission  # OK
     else:
         return "DENIED", 403  # Forbidden
+
 
 @app.route('/request', methods=['POST'])
 def receive_requests():
@@ -166,8 +168,8 @@ def receive_requests():
     if len(user.supervisors) != 0:
         # Ask supervisors
         for sup in user.supervisors:
-            sup.recieved_requests.append(perm_request)
+            sup.received_requests.append(perm_request)
     else:
         # Ask co-supervisors
         for co in user.co_supervisors:
-            co.recieved_requests.append(perm_request)
+            co.received_requests.append(perm_request)
