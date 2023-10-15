@@ -170,11 +170,17 @@ class Log:
 
         if enabled == True:
             self.log_file = open(file_name, 'a')
+            self.log("Start", "Starting logging")
+
+    def __del__(self):
+        if self.enabled:
+            self.log("Exit", "Exiting logging")
+        close(self.log_file)
         
     def log(self, type, message):
         if self.enabled:
             time = datetime.now().strftime("[%Y/%m/%d %H:%M:%S]")
-            self.log_file.write('{time} {type}: {message}\n')
+            self.log_file.write(f'{time} {type}: {message}\n')
 
 
 log = Log(True, 'log.txt')
@@ -193,6 +199,7 @@ def get_user_data():
 
     update_active_perms(user.active_perms)
 
+    print("LOGGING")
     log.log("Show", f"/show request from {user.first_name} {user.last_name} <{user.uid}>")
     return jsonify({'user': user.serialize()})
 
