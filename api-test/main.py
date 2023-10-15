@@ -7,6 +7,7 @@ import json
 import jwt
 import authValidate
 from flask_cors import CORS
+import openai
 
 app = Flask(__name__)
 app.config['CORS_HEADERS'] = 'Content-Type'
@@ -14,6 +15,7 @@ CORS(app)
 
 users = []
 
+openai.api_key = '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'
 
 class PermissionStatus(Enum):
     PENDING = 0
@@ -26,7 +28,15 @@ def get_current_time():
 
 
 def get_location(ip):
-    return 0
+    response = requests.get(f'https://ipapi.co/{ip}/json/').json()
+    location_data = {
+        "ip": ip,
+        "city": response.get("city"),
+        "region": response.get("region"),
+        "country": response.get("country_name")
+    }
+    print(location_data)
+    return location_data
 
 
 def decode_token(jwtoken):
@@ -38,7 +48,17 @@ def user_from_token(jwtoken):
         if u.uid == jwtoken.get('email'):
             return u
 
-    new_user = User(jwtoken.get('email'), jwtoken.get('given_name'), jwtoken.get('family_name'), [], [], [])
+    uid = jwtoken.get('email')
+    persistent_perms = []
+    requestable_resources = []
+    supervisors_uid = []
+    # This is a proof-of-concept to ensure everything works, user customization is still a thing to do
+    if uid == 'chrisyx511@outlook.com':
+        persistent_perms.append(Permission('Access level 1', 'file1.txt', get_current_time(), True))
+        requestable_resources.append('reports/confidential.pdf')
+
+    new_user = User(uid, jwtoken.get('given_name'), jwtoken.get('family_name'), persistent_perms, requestable_resources, supervisors_uid)
+
     users.append(new_user)
     log.log("User", f"Created user {new_user.first_name} {new_user.last_name} <{new_user.uid}>")
     return new_user
@@ -64,6 +84,21 @@ def search_requests_for_id(requests, req_id):
         if req.id == req_id:
             return req
 
+def query_openai(prompt, model='gpt-3.5-turbo'):
+    messages = [{"role": "user", "content": prompt}]
+    response = openai.ChatCompletion.create(
+        model=model,
+        messages=messages,
+        temperature=0,
+    )
+
+    return response.choices[0].message["content"]
+
+def update_active_perms(active_perms):
+    now = get_current_time()
+    for act in active_perms:
+        if act.expiry < now:
+            active_perms.remove(act)
 
 class User:
     def __init__(self, uid, first_name, last_name, persistent_perms, requestable_resources, supervisors_uid, can_receive_requests=True, co_supervisors_uid=[]):
@@ -113,7 +148,7 @@ class Permission:
 class PermissionRequest:
     next_id = 0
 
-    def __init__(self, requester_uid, resource, reason, duration, ip):
+    def __init__(self, requester_uid, resource, reason, duration, ip, analysis):
         self.id = PermissionRequest.next_id
         PermissionRequest.next_id += 1
         self.requester_uid = requester_uid
@@ -122,6 +157,7 @@ class PermissionRequest:
         self.reason = reason
         self.duration = duration
         self.ip = ip
+        self.analysis = analysis
         
     def serialize(self):
         return self.__dict__
@@ -155,6 +191,8 @@ def get_user_data():
 
     user = user_from_token(token_contents)
 
+    update_active_perms(user.active_perms)
+
     log.log("Show", f"/show request from {user.first_name} {user.last_name} <{user.uid}>")
     return jsonify({'user': user.__dict__})
 
@@ -162,6 +200,7 @@ def get_user_data():
 @app.route('/review', methods=['POST'])
 def review_request():
     # Get JWT authentication from HTTP header
+    # TODO auto refuse is supervisor doesn't have access
     jwtoken = request.headers['Authorization']
     jwtoken = jwtoken.split()[1]
     token_contents = decode_token(jwtoken)
@@ -224,6 +263,7 @@ def check_permission():
         return Response(jsonify({'error': 'Invalid JSON input'}), status=403)
     resource = request.args.get('resource')
 
+    update_active_perms(user.active_perms)
 
     if (result := search_permissions_for_resource(user.active_perms, resource) != None):
         return jsonify({
@@ -255,9 +295,10 @@ def receive_requests():
     resource = post_data['resource']
     reason = post_data['reason']
     duration = post_data['duration']
-    # TODO get ip
-    ip = '0.0.0.0'
+    ip = request.remote_addr
     location = get_location(ip)
+
+    update_active_perms(user.active_perms)
 
     if (result := search_permissions_for_resource(user.active_perms, resource)) != None:
         return jsonify({
@@ -284,6 +325,18 @@ def receive_requests():
     user.sent_requests.append(perm_request)
 
     # TODO machine learning and heuristic stuff
+    analysis = ""
+    if location['city'] != 'Montreal':
+        analysis.append(f"Warning: IP address originates from outside Montreal (city: {location['city']})\n")
+
+    gpt_prompt = f"We received a request to access a resource that may contain personal information named: '{resource}'.\
+        I need you to help us determine if the request is from a valid source r if it may be used for malicious intent.\
+        The requester provided a reason to access the data, here it is: '{reason}'.\
+        Considering the reason and the name of the resource, can you help us analyze if this request is legit? Provide a very short analysis of 10 to 20 words."
+
+    gpt_response = query_openai(gpt_prompt)
+    print(gpt_response)
+
     if len(user.supervisors_uid) != 0:
         # Ask supervisors
         for sup_uid in user.supervisors_uid:
