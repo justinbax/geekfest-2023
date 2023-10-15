@@ -100,6 +100,7 @@ def get_user_data():
     jwtoken = request.headers['Authorization']
     jwtoken = jwtoken.split()[1]
     token_contents = decode_token(jwtoken)
+
     user = user_from_uid(token_contents['email'])
 
     return jsonify({'user': user.__dict__})
@@ -107,8 +108,20 @@ def get_user_data():
 
 @app.route('/review', methods=['POST'])
 def review_request():
-    # TODO this
-    return
+    # Get JWT authentification from HTTP header
+    jwtoken = request.headers['Authorization']
+    jwtoken = jwtoken.split()[1]
+    token_contents = decode_token(jwtoken)
+
+    user = user_from_uid(token_contents['email'])
+
+    post_data = request.get_json()
+
+    resource = post_data['id']
+    reason = post_data['status']
+    duration = post_data['expiry']
+
+    
 
 
 @app.route('/check', methods=['GET'])
@@ -122,10 +135,16 @@ def check_permission():
 
     resource = request.args.get('resource')
 
-    if resource in user.active_perms:
-        return "ACTIVE" + Permission  # OK
+
+    if (result := search_permissions_for_resource(user.active_perms, resource) != None):
+        return jsonify({
+            'status': 'ACTIVE',
+            'permission': result
+        })
     else:
-        return "DENIED", 403  # Forbidden
+        return jsonify({
+            'status': 'DENIED'
+        })
 
 
 @app.route('/request', methods=['POST'])
@@ -137,11 +156,11 @@ def receive_requests():
 
     user = user_from_uid(token_contents['email'])
 
-    request_data = request.get_json()
+    post_data = request.get_json()
 
-    resource = request_data['resource']
-    reason = request_data['reason']
-    duration = request_data['duration']
+    resource = post_data['resource']
+    reason = post_data['reason']
+    duration = post_data['duration']
     # TODO get ip
     ip = '0.0.0.0'
 
