@@ -38,7 +38,11 @@ const routes = [
         name: 'Login Page',
         component: () => import(/* webpackChunkName: "login" */ '@/views/Login.vue'),
       },
-
+      {
+        path: 'requests',
+        name: 'List Of Requests',
+        component: () => import(/* webpackChunkName: "requests" */ '@/views/Requests.vue')
+      }
     ],
   },
 ]

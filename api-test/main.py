@@ -192,9 +192,8 @@ def get_user_data():
         return Response(jsonify({'error': 'Invalid JWT signature'}), status=403)
 
     user = user_from_token(token_contents)
-
     update_active_perms(user.active_perms)
-
+    print(user.serialize())
     log.log("Show", f"/show request from {user.first_name} {user.last_name} <{user.uid}>")
     return jsonify({'user': user.serialize()})
 

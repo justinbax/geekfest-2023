@@ -8,8 +8,8 @@
                 </v-sheet>
             </v-col>
         </v-row>
-        <user-granted-permissions></user-granted-permissions>
-        
+        <user-granted-permissions v-if="activeUser" :active-user="activeUser"></user-granted-permissions>
+
     </v-container>
 </template>
 
@@ -17,11 +17,11 @@
     import { auth } from '@/store/auth';
     import {ref, Ref, computed, onMounted} from 'vue';
     import UserGrantedPermissions from './UserGrantedPermissions.vue';
-    let cheeseCount: Ref<number> = ref(0)
+import { Api } from '@/services/api';
+import { User } from '@/assets/globalTypes';
     let periodOfDay: Ref<number> = ref(0)
-    let selectedPermission: Ref<string> = ref("Test")
-    let durationInMinutes: Ref<number> = ref(5)
-    let justificationString: Ref<string> = ref("")
+    let activeUser: Ref<User | undefined> = ref()
+
     onMounted(() => {
         const date: Date = new Date()
         console.log(date.getHours())
@@ -34,7 +34,7 @@
         }
         /*console.log(greetingMessages.value[periodOfDay.value])*/
     })
-    
+
     const greetingMessage = computed(() => {
         switch (periodOfDay.value) {
             case 0:
@@ -45,14 +45,26 @@
                 return 'Good evening!'
         }
     })
-
-    function submit(): void {
-        console.log({
-            permission: selectedPermission.value,
-            duration: durationInMinutes.value,
-            justification: justificationString.value,
-            token: auth.account,
+    Api.get('/show').then((res) => {
+        activeUser.value = new User(
+            res.user.uid,
+            res.user.first_name,
+            res.user.last_name,
+            res.user.persistent_perms,
+            res.user.requestable_resources,
+            res.user.supervisors_uid,
+        )
+        for (let i: number = 0; i < res.user.active_perms.length; i++) {
+            activeUser.value.active_perms.push(res.user.active_perms[i])
+        }
+        console.log(activeUser.value.active_perms)
+        activeUser.value.active_perms.push({
+            name: "Test",
+            resource: "Test",
+            expiry_time: Date.now() + 5000,
+            is_inherent: false
         })
-    }
+        console.log(activeUser.value)
+    })
 
 </script>

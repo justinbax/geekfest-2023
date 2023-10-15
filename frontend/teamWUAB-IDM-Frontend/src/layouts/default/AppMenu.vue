@@ -29,7 +29,11 @@
             title: "Apply & Requests",
             value: 2,
             path: "/apply",
-            icon: "mdi-checkmark"
+        },
+        {
+            title: "Notifications",
+            value: 3,
+            path: "/requests",
         },
         {
             title: "Login",
@@ -38,5 +42,5 @@
             icon: "mdi-lock"
         },
     ])
-    
+
 </script>
