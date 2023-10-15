@@ -71,7 +71,7 @@ class User:
         self.co_supervisors_uid = co_supervisors_uid
         self.sent_requests = []
         self.received_requests = []
-        self.has_co_supervisors = len(co_supervisors) > 0
+        self.has_co_supervisors = len(co_supervisors_uid) > 0
         self.can_receive_requests = can_receive_requests
     
     def serialize(self):
