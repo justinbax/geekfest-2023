@@ -79,14 +79,14 @@ class User:
             'uid': self.uid,
             'first_name': self.first_name,
             'last_name': self.last_name,
-            #self.persistent_perms = persistent_perms
-            #self.active_perms = []
-            #self.denied_perms = []
+            #'persistent_perms': self.persistent_perms,
+            #'active_perms': self.active_perms,
+            #'denied_perms': self.denied_perms,
             'requestable_resources': self.requestable_resources,
-            #self.supervisors = supervisors
-            #self.co_supervisors = co_supervisors
-            #self.sent_requests = []
-            #self.received_requests = []
+            #'supervisors': self.supervisors,
+            #'co_supervisors': self.co_supervisors,
+            #'sent_requests': self.sent_requests
+            #'received_requests': self.received_requests
             'has_co_supervisors': self.has_co_supervisors,
             'can_receive_requests': self.can_receive_requests
         }
