@@ -8,6 +8,7 @@ import authValidate
 from flask_cors import CORS
 
 app = Flask(__name__)
+app.config['CORS_HEADERS'] = 'Content-Type'
 CORS(app)
 
 users = []
@@ -32,7 +33,7 @@ def user_from_token(jwtoken):
     for u in users:
         if u.uid == jwtoken['email']:
             return u
-    
+
 
     new_user = User(jwtoken['email'], jwtoken['given_name'], jwtoken['family_name'], [], [], [])
     users.append(new_user)

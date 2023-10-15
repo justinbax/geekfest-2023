@@ -50,7 +50,7 @@
 
     function submit(): void {
         console.log(JSON.stringify(new PermissionRequest(selectedPermission.value, Date.now(), justificationString.value, durationInMinutes.value * 60)))
-        Api.post("/request",JSON.stringify(new PermissionRequest(selectedPermission.value, Date.now(), justificationString.value, durationInMinutes.value * 60)))
+        Api.post("/request", '{"resource":"Test","time":1697347873857,"reason":"","duration":300}')
         Api.get("/test").then((res: User) => {
             console.log(res)
         })
