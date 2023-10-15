@@ -81,11 +81,11 @@ class Permission:
         self.approved_time = get_current_time()
         self.is_inherent = is_inherent
     
-    def serialize():
+    def serialize(self):
         return {
             'name': self.name,
             'resource': self.resource,
-            #'holder': self.holder.serialize,
+            # 'holder': self.holder.serialize,
             'expiry_time': self.expiry_time,
             'approved_time': self.approved_time,
             'is_inherent': self.is_inherent
