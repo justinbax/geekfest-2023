@@ -95,7 +95,9 @@ class PermissionRequest:
 
 
 # TODO create actual users
+some_perms = [Permission('arch', 'something', None, 1234)]
 users = [User('test', [], [], [])]
+users[0].active_perms = some_perms
 
 
 @app.route('/show', methods=['GET'])
@@ -181,6 +183,7 @@ def receive_requests():
     duration = post_data['duration']
     # TODO get ip
     ip = '0.0.0.0'
+    location = get_location()
 
     if (result := search_permissions_for_resource(user.active_perms, resource)) != None:
         return jsonify({
