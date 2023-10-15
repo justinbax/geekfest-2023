@@ -104,6 +104,17 @@ def review_request():
 
 @app.route('/check', methods=['GET'])
 def check_permission():
+    # Get JWT authentification from HTTP header
+    jwtoken = request.headers['Authorization']
+    jwtoken = jwtoken.split()[1]
+    token_contents = decode_token(jwtoken)
+
+    resource = request.args.get('resource')
+
+    if resource in User.active_perms:
+        return "ACTIVE" + Permission  # OK
+    else:
+        return "DENIED", 403  # Forbidden
 
 @app.route('/request', methods=['POST'])
 def receive_requests():
