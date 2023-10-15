@@ -38,6 +38,13 @@ def user_from_token(jwtoken):
     users.append(new_user)
     return new_user
 
+def user_from_uid(uid):
+    for u in users:
+        if u.uid == uid:
+            return u
+        
+    return None
+
 
 def search_permissions_for_resource(permissions, resource):
     for perm in permissions:
@@ -68,19 +75,32 @@ class User:
         self.can_receive_requests = can_receive_requests
     
     def serialize(self):
-        # TODO fix this, i know it's not working
-        return self.__dict__
+        return {
+            'uid': self.uid,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            #self.persistent_perms = persistent_perms
+            #self.active_perms = []
+            #self.denied_perms = []
+            'requestable_resources': self.requestable_resources,
+            #self.supervisors = supervisors
+            #self.co_supervisors = co_supervisors
+            #self.sent_requests = []
+            #self.received_requests = []
+            'has_co_supervisors': self.has_co_supervisors,
+            'can_receive_requests': self.can_receive_requests
+        }
 
 
 class Permission:
-    def __init__(self, name, resource, holder, expiry_time, is_inherent=False):
+    def __init__(self, name, resource, expiry_time, is_inherent=False):
         self.name = name
         self.resource = resource
-        self.holder = holder
         self.expiry_time = expiry_time
         self.approved_time = get_current_time()
         self.is_inherent = is_inherent
     
+    def serialize(self):
     def serialize(self):
         return {
             'name': self.name,
@@ -94,21 +114,23 @@ class Permission:
 class PermissionRequest:
     next_id = 0
 
-    def __init__(self, requester, resource, reason, duration, ip):
+    def __init__(self, requester_uid, resource, reason, duration, ip):
         self.id = PermissionRequest.next_id
         PermissionRequest.next_id += 1
-        self.requester = requester
+        self.requester_uid = request_uid
         self.resource = resource
         self.time_sent = get_current_time()
         self.reason = reason
         self.duration = duration
         self.ip = ip
-        self.status = PermissionStatus.PENDING
+        
+    def serialize(self):
+        return self.__dict__
 
 
 @app.route('/show', methods=['GET'])
 def get_user_data():
-    # Get JWT authentification from HTTP header
+    # Get JWT auethentication from HTTP header
     jwtoken = request.headers['Authorization']
     jwtoken = jwtoken.split()[1]
     token_contents = decode_token(jwtoken)
@@ -122,7 +144,7 @@ def get_user_data():
 
 @app.route('/review', methods=['POST'])
 def review_request():
-    # Get JWT authentification from HTTP header
+    # Get JWT authentication from HTTP header
     jwtoken = request.headers['Authorization']
     jwtoken = jwtoken.split()[1]
     token_contents = decode_token(jwtoken)
@@ -161,7 +183,7 @@ def review_request():
 
 @app.route('/check', methods=['GET'])
 def check_permission():
-    # Get JWT authentification from HTTP header
+    # Get JWT authentication from HTTP header
     jwtoken = request.headers['Authorization']
     jwtoken = jwtoken.split()[1]
     token_contents = decode_token(jwtoken)
