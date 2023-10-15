@@ -39,6 +39,8 @@
 <script setup lang="ts">
     import { PermissionRequest, PermissionStatus } from '@/assets/globalTypes';
     import {ref, Ref, computed, onMounted} from 'vue';
+    import { Api } from "@/services/api"
+    import { User } from "@/assets/globalTypes"
     let cheeseCount: Ref<number> = ref(0)
     let periodOfDay: Ref<number> = ref(0)
     let selectedPermission: Ref<string> = ref("Test")
@@ -48,6 +50,10 @@
 
     function submit(): void {
         console.log(JSON.stringify(new PermissionRequest(selectedPermission.value, Date.now(), justificationString.value, durationInMinutes.value * 60)))
+        Api.post("/request",JSON.stringify(new PermissionRequest(selectedPermission.value, Date.now(), justificationString.value, durationInMinutes.value * 60)))
+        Api.get("/test").then((res: User) => {
+            console.log(res)
+        })
     }
 
 </script>

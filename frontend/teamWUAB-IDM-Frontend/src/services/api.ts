@@ -1,5 +1,5 @@
 import { Auth } from './auth'
-
+import { root } from '@/config/api'
 /**
  * Api service
  */
@@ -31,6 +31,6 @@ async function call (method: 'get' | 'post', path: string, data?: any) {
       : options['body'] = JSON.stringify(data)
   }
 
-  return fetch(`${path}`, options)
+  return fetch(`${root}${path}`, options)
     .then(response => response.json())
 }

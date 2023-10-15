@@ -1,1 +1,1 @@
-export const root = "https://graph.microsoft.com"
+export const root = "http://localhost:8080"
