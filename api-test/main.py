@@ -125,8 +125,8 @@ class User:
             'active_perms': [a.serialize() for a in self.active_perms],
             'denied_perms': [d.serialize() for d in self.denied_perms],
             'requestable_resources': self.requestable_resources,
-            'supervisors': self.supervisors,
-            'co_supervisors': self.co_supervisors,
+            'supervisors_uid': self.supervisors_uid,
+            'co_supervisors_uid': self.co_supervisors_uid,
             'sent_requests': [s.serialize() for s in self.sent_requests],
             'received_requests': [r.serialize() for r in self.received_requests],
             'has_co_supervisors': self.has_co_supervisors,
@@ -194,7 +194,7 @@ def get_user_data():
     update_active_perms(user.active_perms)
 
     log.log("Show", f"/show request from {user.first_name} {user.last_name} <{user.uid}>")
-    return jsonify({'user': user.__dict__})
+    return jsonify({'user': user.serialize()})
 
 
 @app.route('/review', methods=['POST'])
@@ -268,7 +268,7 @@ def check_permission():
     if (result := search_permissions_for_resource(user.active_perms, resource) != None):
         return jsonify({
             'status': 'ACTIVE',
-            'permission': result
+            'permission': result.serialize()
         })
     else:
         return jsonify({
@@ -303,21 +303,21 @@ def receive_requests():
     if (result := search_permissions_for_resource(user.active_perms, resource)) != None:
         return jsonify({
             'status': 'ACTIVE',
-            'permission': result
+            'permission': result.serialize()
         })
 
     if (result := search_permissions_for_resource(user.persistent_perms, resource)) != None:
         log.log("Request", f"Request automatically granted for {resource} for user {user.first_name} {user.last_name} <{user.uid}> because in persistent perms.")
         return jsonify({
             'status': 'GRANTED',
-            'permission': result
+            'permission': result.serialize()
         })
 
     if (result := search_permissions_for_resource(user.denied_perms, resource)) != None:
         log.log("Request", f"Request automatically denied for {resource} for user {user.first_name} {user.last_name} <{user.uid}> because in denied perms.")
         return jsonify({
             'status': 'DENIED',
-            'permission': result
+            'permission': result.serialize()
         })
 
     # TODO right now we don't check if resource is in requestable_resources because, with the UI, it should always be. but probably better idea to check
