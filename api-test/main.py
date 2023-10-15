@@ -59,7 +59,7 @@ def search_requests_for_id(requests, req_id):
 
 
 class User:
-    def __init__(self, uid, first_name, last_name, persistent_perms, requestable_resources, supervisors, can_receive_requests=True, co_supervisors=[]):
+    def __init__(self, uid, first_name, last_name, persistent_perms, requestable_resources, supervisors_uid, can_receive_requests=True, co_supervisors_uid=[]):
         self.uid = uid
         self.first_name = first_name
         self.last_name = last_name
@@ -67,8 +67,8 @@ class User:
         self.active_perms = []
         self.denied_perms = []
         self.requestable_resources = requestable_resources
-        self.supervisors = supervisors
-        self.co_supervisors = co_supervisors
+        self.supervisors_uid = supervisors_uid
+        self.co_supervisors_uid = co_supervisors_uid
         self.sent_requests = []
         self.received_requests = []
         self.has_co_supervisors = len(co_supervisors) > 0
@@ -79,14 +79,14 @@ class User:
             'uid': self.uid,
             'first_name': self.first_name,
             'last_name': self.last_name,
-            #'persistent_perms': self.persistent_perms,
-            #'active_perms': self.active_perms,
-            #'denied_perms': self.denied_perms,
+            'persistent_perms': [p.serialize() for p in self.persistent_perms],
+            'active_perms': [a.serialize() for a in self.active_perms],
+            'denied_perms': [d.serialize() for d in self.denied_perms],
             'requestable_resources': self.requestable_resources,
-            #'supervisors': self.supervisors,
-            #'co_supervisors': self.co_supervisors,
-            #'sent_requests': self.sent_requests
-            #'received_requests': self.received_requests
+            'supervisors': self.supervisors,
+            'co_supervisors': self.co_supervisors,
+            'sent_requests': [s.serialize() for s in self.sent_requests],
+            'received_requests': [r.serialize() for r in self.received_requests],
             'has_co_supervisors': self.has_co_supervisors,
             'can_receive_requests': self.can_receive_requests
         }
@@ -101,15 +101,7 @@ class Permission:
         self.is_inherent = is_inherent
     
     def serialize(self):
-    def serialize(self):
-        return {
-            'name': self.name,
-            'resource': self.resource,
-            # 'holder': self.holder.serialize,
-            'expiry_time': self.expiry_time,
-            'approved_time': self.approved_time,
-            'is_inherent': self.is_inherent
-        }
+        return self.__dict__
 
 class PermissionRequest:
     next_id = 0
@@ -250,14 +242,18 @@ def receive_requests():
     user.sent_requests.append(perm_request)
 
     # TODO machine learning and heuristic stuff
-    if len(user.supervisors) != 0:
+    if len(user.supervisors_uid) != 0:
         # Ask supervisors
-        for sup in user.supervisors:
-            sup.received_requests.append(perm_request)
+        for sup_uid in user.supervisors_uid:
+            sup = user_from_uid(sup_uid)
+            if sup != None:
+                sup.received_requests.append(perm_request)
     else:
         # Ask co-supervisors
-        for co in user.co_supervisors:
-            co.received_requests.append(perm_request)
+        for co_uid in user.co_supervisors_uid:
+            co = user_from_uid(co_uid)
+            if co != None:
+                co.received_requests.append(perm_request)
 
     return jsonify({
         'status': 'PENDING',
