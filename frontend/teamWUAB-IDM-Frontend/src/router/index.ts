@@ -29,10 +29,16 @@ const routes = [
         component: () => import(/* webpackChunkName: "home" */ '@/views/Home.vue'),
       },
       {
+        path: 'apply',
+        name: 'ApplyRequestPerms',
+        component: () => import(/* webpackChunkName: "apply" */ '@/views/ApplyPerm.vue')
+      },
+      {
         path: 'login',
         name: 'Login Page',
         component: () => import(/* webpackChunkName: "login" */ '@/views/Login.vue'),
-      }
+      },
+
     ],
   },
 ]

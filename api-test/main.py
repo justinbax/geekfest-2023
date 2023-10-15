@@ -13,7 +13,7 @@ class PermissionStatus(Enum):
     DENIED = 2
 
 class User:
-    def __init__(self, jwtoken, persistent_perms, requestable_resources supervisors, can_recieve_requests=True, co_supervisors=[]):
+    def __init__(self, jwtoken, persistent_perms, requestable_resources, supervisors, can_recieve_requests=True, co_supervisors=[]):
         token_content = decode_token(jwtoken)
         # TODO maybe use field 'sub' as uid
         self.uid = token_content['email']
