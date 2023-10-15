@@ -90,10 +90,17 @@ def search_permissions_for_resource(permissions, resource):
     return None
 
 
-@app.route('/show', methods=['GET'])
+@app.route('/show', methods=['GET',])
 def get_user_data():
     # TODO this
-    return
+
+    # Get JWT authentification from HTTP header
+    jwtoken = request.headers['Authorization']
+    jwtoken = jwtoken.split()[1]
+    token_contents = decode_token(jwtoken)
+    user = user_from_uid(token_contents['email'])
+
+    return user
 
 
 @app.route('/review', methods=['POST'])
@@ -109,9 +116,11 @@ def check_permission():
     jwtoken = jwtoken.split()[1]
     token_contents = decode_token(jwtoken)
 
+    user = user_from_uid(token_contents['email'])
+
     resource = request.args.get('resource')
 
-    if resource in User.active_perms:
+    if resource in user.active_perms:
         return "ACTIVE" + Permission  # OK
     else:
         return "DENIED", 403  # Forbidden
