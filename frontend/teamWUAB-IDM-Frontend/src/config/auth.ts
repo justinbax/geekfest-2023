@@ -2,7 +2,7 @@ import type { Configuration } from '@azure/msal-browser'
 import { LogLevel } from '@azure/msal-browser'
 
 export const scopes = [
-  'openid','profile'
+  'openid','profile', "api://84f6c12a-12bf-4fd0-91bc-2dfb30ecadea/AccessPerms"
 ]
 
 export const config: Configuration = {

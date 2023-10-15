@@ -23,7 +23,7 @@ def validate_auth_token(auth_token):
         openid_discovery_data = requests.get(openid_discovery_uri).json()
         jwks_uri = openid_discovery_data["jwks_uri"]
         jwks = jwt.PyJWKClient(jwks_uri, cache_keys=True, lifespan=360)
-        print("OK" + jwks_uri)
+        print("OK " + jwks_uri)
         signing_key = jwks.get_signing_key_from_jwt(auth_token)
         data = jwt.decode(auth_token, signing_key.key, algorithms=["RS256"], issuer=jwt_options["issuer"], audience=jwt_options["audience"], options={
             "verify_signature": True,
