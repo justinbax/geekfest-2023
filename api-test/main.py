@@ -64,6 +64,9 @@ class User:
         self.received_requests = []
         self.has_co_supervisors = len(co_supervisors) > 0
         self.can_receive_requests = can_receive_requests
+    
+    def serialize(self):
+        return this.__dict__
 
 
 class Permission:
@@ -74,7 +77,16 @@ class Permission:
         self.expiry_time = expiry_time
         self.approved_time = get_current_time()
         self.is_inherent = is_inherent
-
+    
+    def serialize():
+        return {
+            'name': self.name,
+            'resource': self.resource,
+            'holder': self.holder.serialize,
+            'expiry_time': self.expiry_time,
+            'approved_time': self.approved_time,
+            'is_inherent': self.is_inherent
+        }
 
 class PermissionRequest:
     next_id = 0
@@ -135,19 +147,24 @@ def review_request():
     # TODO Have actual error handling lmao
     request_reviewed = search_requests_for_id(user.received_requests, request_id)
     print(request_reviewed)
+    print(user.received_requests)
     print(user.received_requests[0])
     user.received_requests.remove(request_reviewed)
 
     request_reviewed.requester.sent_requests.remove(request_reviewed)
 
     # TODO generate name
-    new_permission = Permission(resource, resource, request_reviewed.requester, expiry)
+    new_permission = Permission(request_reviewed.resource, request_reviewed.resource, request_reviewed.requester, expiry)
     if status == 'GRANTED':
         request_reviewed.requester.active_perms.append(new_permission)
     else:
         # TODO what do we do with that?
         new_permission.expiry_time = 0
         request_reviewed.requester.denied_perms.append(new_permission)
+
+    return jsonify({
+        'permission': request_reviewed.serialize()
+    })
 
 @app.route('/check', methods=['GET'])
 def check_permission():
