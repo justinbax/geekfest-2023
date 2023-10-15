@@ -49,15 +49,14 @@ export class PermissionRequest {
     reason: string
     duration:  number
     ip?: string
-    status: PermissionStatus
+    status?: PermissionStatus
 
-    constructor(resource: string, time: number, reason: string, duration: number, status: PermissionStatus, ip?: string) {
+    constructor(resource: string, time: number, reason: string, duration: number) {
         this.resource = resource
         this.time = time
         this.reason = reason
         this.duration = duration
-        this.ip = ip
-        this.status = status
+
     }
 
 }

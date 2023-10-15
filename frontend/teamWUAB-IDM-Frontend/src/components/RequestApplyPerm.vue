@@ -44,10 +44,10 @@
     let selectedPermission: Ref<string> = ref("Test")
     let durationInMinutes: Ref<number> = ref(5)
     let justificationString: Ref<string> = ref("")
-    
-        
+
+
     function submit(): void {
-        console.log(new PermissionRequest(selectedPermission.value, Date.now(), justificationString.value, durationInMinutes.value * 60, PermissionStatus.PENDING))
+        console.log(JSON.stringify(new PermissionRequest(selectedPermission.value, Date.now(), justificationString.value, durationInMinutes.value * 60)))
     }
 
 </script>
