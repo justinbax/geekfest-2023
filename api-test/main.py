@@ -1,5 +1,6 @@
 from enum import Enum
 import time
+from datetime import datetime
 from flask import Flask, jsonify, request, Response
 import requests
 import json
@@ -13,6 +14,7 @@ CORS(app)
 
 users = []
 
+
 class PermissionStatus(Enum):
     PENDING = 0
     GRANTED = 1
@@ -22,8 +24,10 @@ class PermissionStatus(Enum):
 def get_current_time():
     return int(time.time())
 
-def get_location():
+
+def get_location(ip):
     return 0
+
 
 def decode_token(jwtoken):
     return authValidate.validate_auth_token(jwtoken)
@@ -33,10 +37,12 @@ def user_from_token(jwtoken):
     for u in users:
         if u.uid == jwtoken.get('email'):
             return u
-    
+
     new_user = User(jwtoken.get('email'), jwtoken.get('given_name'), jwtoken.get('family_name'), [], [], [])
     users.append(new_user)
+    log.log("User", f"Created user {new_user.first_name} {new_user.last_name} <{new_user.uid}>")
     return new_user
+
 
 def user_from_uid(uid):
     for u in users:
@@ -51,6 +57,7 @@ def search_permissions_for_resource(permissions, resource):
         if perm.resource == resource:
             return perm
     return None
+
 
 def search_requests_for_id(requests, req_id):
     for req in requests:
@@ -120,6 +127,23 @@ class PermissionRequest:
         return self.__dict__
 
 
+class Log:
+    def __init__(self, enabled, file_name):
+        self.enabled = enabled
+        self.log_file = None
+
+        if enabled == True:
+            self.log_file = open(file_name, 'a')
+        
+    def log(type, message):
+        if self.enabled:
+            time = datetime.now().strftime("[%Y/%m/%d %H:%M:%S]")
+            self.log_file.write('{time} {type}: {message}\n')
+
+
+log = Log(True, 'log.txt')
+
+
 @app.route('/show', methods=['GET'])
 def get_user_data():
     # Get JWT auethentication from HTTP header
@@ -131,6 +155,7 @@ def get_user_data():
 
     user = user_from_token(token_contents)
 
+    log.log("Show", f"/show request from {user.first_name} {user.last_name} <{user.uid}>")
     return jsonify({'user': user.__dict__})
 
 
@@ -148,26 +173,36 @@ def review_request():
 
     post_data = request.get_json()
 
+    if not ('id' in post_data and 'status' in post_data and 'expiry' in post_data):
+        return Response(jsonify({'error': 'Invalid JSON input'}), status=403)
+
     request_id = post_data['id']
     status = post_data['status']
     expiry_mins = post_data['expiry']
 
     expiry = get_current_time() + expiry_mins
 
-    # TODO Have actual error handling lmao
     request_reviewed = search_requests_for_id(user.received_requests, request_id)
-    user.received_requests.remove(request_reviewed)
+    if request_reviewed == None:
+        return Response(jsonify({'error': 'Invalid request id'}), status=403)
 
+    if not(request_reviewed in user.received_requests and request_reviewed in requester.sent_request):
+        log.log("Error", f"Failed to remove request id {request_id} from received or sent requests in /review")
+        return Response(jsonify({"error": "Couldn't find request id"}), status=403)
+
+    user.received_requests.remove(request_reviewed)
     request_reviewed.requester.sent_requests.remove(request_reviewed)
 
-    # TODO generate name
-    new_permission = Permission(request_reviewed.resource, request_reviewed.resource, request_reviewed.requester, expiry)
+    new_permission = Permission(f'Access to {request_reviewed.resource}', request_reviewed.resource, request_reviewed.requester, expiry)
     if status == 'GRANTED':
+        log.log("Review", f"Permission request id {request_reviewed.id} to {request_reviewed.resource} granted from {user.first_name} {user_last_name} <{user.uid}>")
         request_reviewed.requester.active_perms.append(new_permission)
     else:
         # TODO what do we do with that?
+        log.log("Review", f"Permission request id {request_reviewed.id} to {request_reviewed.resource} denied from {user.first_name} {user_last_name} <{user.uid}>")
         new_permission.expiry_time = 0
         request_reviewed.requester.denied_perms.append(new_permission)
+
 
     return jsonify({
         'permission': request_reviewed.serialize()
@@ -185,6 +220,8 @@ def check_permission():
 
     user = user_from_token(token_contents)
 
+    if not 'resource' in request.args:
+        return Response(jsonify({'error': 'Invalid JSON input'}), status=403)
     resource = request.args.get('resource')
 
 
@@ -212,12 +249,15 @@ def receive_requests():
     user = user_from_token(token_contents)
     post_data = request.get_json()
 
+    if not ('resource' in post_data and 'reason' in post_data and 'duration' in post_data):
+        return Response(jsonify({'error': 'Invalid JSON input'}), status=403)
+
     resource = post_data['resource']
     reason = post_data['reason']
     duration = post_data['duration']
     # TODO get ip
     ip = '0.0.0.0'
-    location = get_location()
+    location = get_location(ip)
 
     if (result := search_permissions_for_resource(user.active_perms, resource)) != None:
         return jsonify({
@@ -226,12 +266,14 @@ def receive_requests():
         })
 
     if (result := search_permissions_for_resource(user.persistent_perms, resource)) != None:
+        log.log("Request", f"Request automatically granted for {resource} for user {user.first_name} {user.last_name} <{user.uid}> because in persistent perms.")
         return jsonify({
             'status': 'GRANTED',
             'permission': result
         })
 
     if (result := search_permissions_for_resource(user.denied_perms, resource)) != None:
+        log.log("Request", f"Request automatically denied for {resource} for user {user.first_name} {user.last_name} <{user.uid}> because in denied perms.")
         return jsonify({
             'status': 'DENIED',
             'permission': result
@@ -248,13 +290,18 @@ def receive_requests():
             sup = user_from_uid(sup_uid)
             if sup != None:
                 sup.received_requests.append(perm_request)
+            else:
+                log.log("Error", f"Couln't find supervisor from uid <{sup_uid}> for user {user.first_name} {user.last_name} <{user.uid}>")
     else:
         # Ask co-supervisors
         for co_uid in user.co_supervisors_uid:
             co = user_from_uid(co_uid)
             if co != None:
                 co.received_requests.append(perm_request)
+            else:
+                log.log("Error", f"Couldn't find co-supervisor from uid <{sup_uid}> for user {user.first_name} {user.last_name} <{user.uid}>")
 
+    log.log("Request", f"Received pending request for {resource} from {user.first_name} {user.last_name} <{user.uid}>")
     return jsonify({
         'status': 'PENDING',
     })
