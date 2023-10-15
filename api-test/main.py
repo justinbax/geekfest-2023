@@ -43,6 +43,11 @@ def search_permissions_for_resource(permissions, resource):
             return perm
     return None
 
+def search_requests_for_id(requests, req_id):
+    for req in requests:
+        if req.id == req_id:
+            return req
+
 
 class User:
     def __init__(self, jwtoken, persistent_perms, requestable_resources, supervisors, can_receive_requests=True,
@@ -77,9 +82,10 @@ class Permission:
 class PermissionRequest:
     next_id = 0
 
-    def __init__(self, resource, reason, duration, ip):
+    def __init__(self, requester, resource, reason, duration, ip):
         self.id = PermissionRequest.next_id
         PermissionRequest.next_id += 1
+        self.requester = requester
         self.resource = resource
         self.time_sent = get_current_time()
         self.reason = reason
@@ -92,10 +98,8 @@ class PermissionRequest:
 users = [User('test', [], [], [])]
 
 
-@app.route('/show', methods=['GET', ])
+@app.route('/show', methods=['GET'])
 def get_user_data():
-    # TODO this
-
     # Get JWT authentification from HTTP header
     jwtoken = request.headers['Authorization']
     jwtoken = jwtoken.split()[1]
@@ -117,12 +121,26 @@ def review_request():
 
     post_data = request.get_json()
 
-    resource = post_data['id']
-    reason = post_data['status']
-    duration = post_data['expiry']
+    request_id = post_data['id']
+    status = post_data['status']
+    expiry_mins = post_data['expiry']
 
-    
+    expiry = get_current_time() + expiry_mins * 60
 
+    # TODO Have actual error handling lmao
+    request_reviewed = search_requests_for_id(user, request_id)
+    user.received_requests.remove(request_reviewed)
+
+    request_reviewed.requester.sent_requests.remove(request_reviewed)
+
+    # TODO generate name
+    new_permission = Permission(resource, resource, request_reviewed.requester, expiry)
+    if status == 'GRANTED':
+        request_reviewed.requester.active_perms.append(new_permission)
+    else:
+        # TODO what do we do with that?
+        new_permission.expiry_time = 0
+        request_reviewed.requester.denied_perms.append(new_permission)
 
 @app.route('/check', methods=['GET'])
 def check_permission():
@@ -183,7 +201,7 @@ def receive_requests():
         })
 
     # TODO right now we don't check if resource is in requestable_resources because, with the UI, it should always be. but probably better idea to check
-    perm_request = PermissionRequest(resource, reason, duration, ip)
+    perm_request = PermissionRequest(user, resource, reason, duration, ip)
     user.sent_requests.append(perm_request)
 
     # TODO machine learning and heuristic stuff
