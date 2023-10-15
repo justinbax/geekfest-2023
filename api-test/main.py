@@ -1,6 +1,6 @@
 from enum import Enum
 import time
-from flask import Flask, jsonify, request
+from flask import Flask, jsonify, request, Response
 import requests
 import json
 import jwt
@@ -31,11 +31,10 @@ def decode_token(jwtoken):
 
 def user_from_token(jwtoken):
     for u in users:
-        if u.uid == jwtoken['email']:
+        if u.uid == jwtoken.get('email'):
             return u
-
-
-    new_user = User(jwtoken['email'], jwtoken['given_name'], jwtoken['family_name'], [], [], [])
+    
+    new_user = User(jwtoken.get('email'), jwtoken.get('given_name'), jwtoken.get('family_name'), [], [], [])
     users.append(new_user)
     return new_user
 
@@ -69,7 +68,8 @@ class User:
         self.can_receive_requests = can_receive_requests
     
     def serialize(self):
-        return this.__dict__
+        # TODO fix this, i know it's not working
+        return self.__dict__
 
 
 class Permission:
@@ -85,7 +85,7 @@ class Permission:
         return {
             'name': self.name,
             'resource': self.resource,
-            'holder': self.holder.serialize,
+            #'holder': self.holder.serialize,
             'expiry_time': self.expiry_time,
             'approved_time': self.approved_time,
             'is_inherent': self.is_inherent
@@ -106,23 +106,16 @@ class PermissionRequest:
         self.status = PermissionStatus.PENDING
 
 
-@app.route('/test', methods=['GET'])
-def get_test():
-    # Get JWT authentification from HTTP header
-    jwtoken = request.headers['Authorization']
-    jwtoken = jwtoken.split()[1]
-    token_contents = decode_token(jwtoken)
-    return jsonify("This works!")
-
-
 @app.route('/show', methods=['GET'])
 def get_user_data():
     # Get JWT authentification from HTTP header
     jwtoken = request.headers['Authorization']
     jwtoken = jwtoken.split()[1]
     token_contents = decode_token(jwtoken)
+    if token_contents == False:
+        return Response(jsonify({'error': 'Invalid JWT signature'}), status=403)
 
-    user = user_from_uid(token_contents['email'])
+    user = user_from_token(token_contents)
 
     return jsonify({'user': user.__dict__})
 
@@ -133,8 +126,11 @@ def review_request():
     jwtoken = request.headers['Authorization']
     jwtoken = jwtoken.split()[1]
     token_contents = decode_token(jwtoken)
+    
+    if token_contents == False:
+        return Response(jsonify({'error': 'Invalid JWT signature'}), status=403)
 
-    user = user_from_uid(token_contents['email'])
+    user = user_from_token(token_contents)
 
     post_data = request.get_json()
 
@@ -142,13 +138,10 @@ def review_request():
     status = post_data['status']
     expiry_mins = post_data['expiry']
 
-    expiry = get_current_time() + expiry_mins * 60
+    expiry = get_current_time() + expiry_mins
 
     # TODO Have actual error handling lmao
     request_reviewed = search_requests_for_id(user.received_requests, request_id)
-    print(request_reviewed)
-    print(user.received_requests)
-    print(user.received_requests[0])
     user.received_requests.remove(request_reviewed)
 
     request_reviewed.requester.sent_requests.remove(request_reviewed)
@@ -173,7 +166,10 @@ def check_permission():
     jwtoken = jwtoken.split()[1]
     token_contents = decode_token(jwtoken)
 
-    user = user_from_uid(token_contents['email'])
+    if token_contents == False:
+        return Response(jsonify({'error': 'Invalid JWT signature'}), status=403)
+
+    user = user_from_token(token_contents)
 
     resource = request.args.get('resource')
 
@@ -196,9 +192,11 @@ def receive_requests():
     jwtoken = jwtoken.split()[1]
     token_contents = decode_token(jwtoken)
 
-    user = user_from_uid(token_contents['email'])
+    if token_contents == False:
+        return Response(jsonify({'error': 'Invalid JWT signature'}), status=403)
+
+    user = user_from_token(token_contents)
     post_data = request.get_json()
-    print(post_data)
 
     resource = post_data['resource']
     reason = post_data['reason']
@@ -240,5 +238,5 @@ def receive_requests():
             co.received_requests.append(perm_request)
 
     return jsonify({
-        'status': 'PENDING'
+        'status': 'PENDING',
     })
