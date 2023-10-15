@@ -137,9 +137,11 @@ def receive_requests():
 
     user = user_from_uid(token_contents['email'])
 
-    resource = request.args['resource']
-    reason = request.args['reason']
-    duration = request.args['duration']
+    request_data = request.get_json()
+
+    resource = request_data['resource']
+    reason = request_data['reason']
+    duration = request_data['duration']
     # TODO get ip
     ip = '0.0.0.0'
 
