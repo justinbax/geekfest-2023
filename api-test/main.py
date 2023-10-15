@@ -15,6 +15,7 @@ CORS(app)
 
 users = []
 
+# TODO hide this lmao
 openai.api_key = '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'
 
 class PermissionStatus(Enum):
@@ -35,7 +36,6 @@ def get_location(ip):
         "region": response.get("region"),
         "country": response.get("country_name")
     }
-    print(location_data)
     return location_data
 
 
@@ -195,7 +195,6 @@ def get_user_data():
 
     update_active_perms(user.active_perms)
 
-    print("LOGGING")
     log.log("Show", f"/show request from {user.first_name} {user.last_name} <{user.uid}>")
     return jsonify({'user': user.serialize()})
 
@@ -323,14 +322,10 @@ def receive_requests():
             'permission': result.serialize()
         })
 
-    # TODO right now we don't check if resource is in requestable_resources because, with the UI, it should always be. but probably better idea to check
-    perm_request = PermissionRequest(user, resource, reason, duration, ip)
-    user.sent_requests.append(perm_request)
-
     # TODO machine learning and heuristic stuff
     analysis = ""
     if location['city'] != 'Montreal':
-        analysis.append(f"Warning: IP address originates from outside Montreal (city: {location['city']})\n")
+        analysis += f"Warning: IP address originates from outside Montreal (city: {location['city']})\n"
 
     gpt_prompt = f"We received a request to access a resource that may contain personal information named: '{resource}'.\
         I need you to help us determine if the request is from a valid source r if it may be used for malicious intent.\
@@ -338,7 +333,12 @@ def receive_requests():
         Considering the reason and the name of the resource, can you help us analyze if this request is legit? Provide a very short analysis of 10 to 20 words."
 
     gpt_response = query_openai(gpt_prompt)
-    print(gpt_response)
+    analysis += gpt_response
+
+    # TODO right now we don't check if resource is in requestable_resources because, with the UI, it should always be. but probably better idea to check
+    perm_request = PermissionRequest(user, resource, reason, duration, ip, analysis)
+    user.sent_requests.append(perm_request)
+
 
     if len(user.supervisors_uid) != 0:
         # Ask supervisors
