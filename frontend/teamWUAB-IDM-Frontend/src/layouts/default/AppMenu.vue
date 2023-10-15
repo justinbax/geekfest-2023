@@ -26,6 +26,12 @@
             icon: "mdi-home"
         },
         {
+            title: "Apply & Requests",
+            value: 2,
+            path: "/apply",
+            icon: "mdi-checkmark"
+        },
+        {
             title: "Login",
             value: 1,
             path: "/login",

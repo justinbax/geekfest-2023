@@ -7,13 +7,15 @@ import jwt
 
 app = Flask(__name__)
 
+
 class PermissionStatus(Enum):
     PENDING = 0
     GRANTED = 1
     DENIED = 2
 
+
 class User:
-    def __init__(self, jwtoken, persistent_perms, requestable_resources supervisors, can_recieve_requests=True, co_supervisors=[]):
+    def __init__(self, jwtoken, persistent_perms, requestable_resources, supervisors, can_recieve_requests=True, co_supervisors=[]):
         token_content = decode_token(jwtoken)
         # TODO maybe use field 'sub' as uid
         self.uid = token_content['email']
@@ -30,6 +32,7 @@ class User:
         self.has_co_supervisors = len(co_supervisors) > 0
         self.can_recieve_requests = can_recieve_requests
 
+
 class Permission:
     def __init__(self, name, resource, holder, expiry_time, is_inherent=False):
         self.name = name
@@ -38,6 +41,7 @@ class Permission:
         self.expiry_time = expiry_time
         self.approved_time = get_current_time()
         self.is_inherent = is_inherent
+
 
 class PermissionRequest:
     next_id = 0
@@ -52,12 +56,15 @@ class PermissionRequest:
         self.ip = ip
         self.status = PermissionStatus.PENDING
 
+
 # TODO create actual users
 users = []
+
 
 def get_current_time():
     # TODO this
     return 0
+
 
 def decode_token(jwtoken):
     # TODO this
@@ -68,11 +75,13 @@ def decode_token(jwtoken):
     }
     return result
 
+
 def user_from_uid(uid):
     for u in users:
         if u.uid == uid:
             return u
     return None
+
 
 def search_permissions_for_resource(permissions, resource):
     for perm in permissions:
@@ -86,15 +95,15 @@ def get_user_data():
     # TODO this
     return
 
+
 @app.route('/review', methods=['POST'])
 def review_request():
     # TODO this
     return
 
+
 @app.route('/check', methods=['GET'])
 def check_permission():
-    # TODO this
-    return
 
 @app.route('/request', methods=['POST'])
 def receive_requests():
@@ -102,7 +111,7 @@ def receive_requests():
     jwtoken = request.headers['Authorization']
     jwtoken = jwtoken.split()[1]
     token_contents = decode_token(jwtoken)
-    
+
     user = user_from_uid(token_contents['email'])
 
     resource = request.args['resource']
@@ -116,7 +125,7 @@ def receive_requests():
             'status': 'ACTIVE',
             'permission': result
         })
-    
+
     if (result := search_permissions_for_resource(user.persistent_perms, resource)) != None:
         return jsonify({
             'status': 'GRANTED',
