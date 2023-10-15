@@ -51,49 +51,35 @@ class PermissionRequest:
         self.ip = ip
         self.status = PermissionStatus.PENDING
 
-permissions = {
-    'lvl0': ['/balls.txt', '/btw.txt'],
-    'lvl1': ['/btw.txt'],
-    'lvl2': []
-}
-
-users = {
-    'joe@mama.com': 'lvl0',
-    'mama@joe.com': 'lvl1',
-    'chris@btw.com': 'lvl2'
-}
-
 def get_current_time():
     # TODO this
     return 0
 
 def decode_token(jwtoken):
-    # Querying Microsoft for URL to their signing keys
-    url = "https://login.microsoftonline.com/4ea43e8a-132e-48c0-901d-52dd22e7cdf3/v2.0/.well-known/openid-configuration"
-    signingkey_response = requests.get(url)
+    # TODO this
+    result = {
+        'email': 'arch@btw.com',
+        'given_name': 'joe',
+        'family_name': 'mama'
+    }
+    return result
 
-    try:
-        signingkey = signingkey_response.content
-        signingkey_url = json.loads(signingkey_json)['jwks_uri']
-
-        jwks_client = jwt.PyJWKClient(signingkey_url)
-        signing_key = jwks_client.get_signing_key_from_jwt(jwtoken)
-        return jwt.decode(jwtoken, signing_key.key, algorithms=["RS256"])
-    except:
-        # TODO better handling
-        print("Token decoding failed")
-        return None
-
-# TODO I don't think this is going to be in the final API
-@app.route('/permissions')
-def get_permissions():
-    return jsonify(permissions)
-
-@app.route('/user')
+@app.route('/show', methods=['GET'])
 def get_user_data():
-    return None
+    # TODO this
+    return
 
-@app.route('/requests', methods=['GET'])
+@app.route('/show', methods=['POST'])
+def review_request():
+    # TODO this
+    return
+
+@app.route('/check', methods=['GET'])
+def check_permission():
+    # TODO this
+    return
+
+@app.route('/request', methods=['POST'])
 def receive_requests():
     # Identify permission level required to get file
     jwtoken = request.args.get('jwt')
