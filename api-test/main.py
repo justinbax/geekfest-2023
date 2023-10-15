@@ -300,6 +300,8 @@ def receive_requests():
     ip = request.remote_addr
     location = get_location(ip)
 
+    expiry = get_current_time() + duration
+
     update_active_perms(user.active_perms)
 
     if (result := search_permissions_for_resource(user.active_perms, resource)) != None:
@@ -310,6 +312,7 @@ def receive_requests():
 
     if (result := search_permissions_for_resource(user.persistent_perms, resource)) != None:
         log.log("Request", f"Request automatically granted for {resource} for user {user.first_name} {user.last_name} <{user.uid}> because in persistent perms.")
+        user.active_perms.append(Permission(f'Granted access to {resource}', resource, expiry))
         return jsonify({
             'status': 'GRANTED',
             'permission': result.serialize()
