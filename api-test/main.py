@@ -13,7 +13,7 @@ class PermissionStatus(Enum):
     DENIED = 2
 
 class User:
-    def __init__(self, jwtoken, persistent_perms, supervisors, can_recieve_requests=True, co_supervisors=[]):
+    def __init__(self, jwtoken, persistent_perms, requestable_resources supervisors, can_recieve_requests=True, co_supervisors=[]):
         token_content = decode_token(jwtoken)
         # TODO maybe use field 'sub' as uid
         self.uid = token_content['email']
@@ -22,6 +22,7 @@ class User:
         self.persistent_perms = persistent_perms
         self.active_perms = []
         self.denied_perms = []
+        self.requestable_resources = requestable_resources
         self.supervisors = supervisors
         self.co_supervisors = co_supervisors
         self.sent_requests = []
@@ -31,7 +32,7 @@ class User:
 
 class Permission:
     def __init__(self, name, resource, holder, expiry_time, is_inherent=False):
-        self.name
+        self.name = name
         self.resource = resource
         self.holder = holder
         self.expiry_time = expiry_time
@@ -41,15 +42,18 @@ class Permission:
 class PermissionRequest:
     next_id = 0
 
-    def __init__(self, resource_description, reason, duration, ip):
+    def __init__(self, resource, reason, duration, ip):
         self.id = PermissionRequest.next_id
         PermissionRequest.next_id += 1
-        self.resource_description = resource_description
+        self.resource = resource
         self.time_sent = get_current_time()
         self.reason = reason
         self.duration = duration
         self.ip = ip
         self.status = PermissionStatus.PENDING
+
+# TODO create actual users
+users = []
 
 def get_current_time():
     # TODO this
@@ -64,12 +68,25 @@ def decode_token(jwtoken):
     }
     return result
 
+def user_from_uid(uid):
+    for u in users:
+        if u.uid == uid:
+            return u
+    return None
+
+def search_permissions_for_resource(permissions, resource):
+    for perm in permissions:
+        if perm.resource == resource:
+            return perm
+    return None
+
+
 @app.route('/show', methods=['GET'])
 def get_user_data():
     # TODO this
     return
 
-@app.route('/show', methods=['POST'])
+@app.route('/review', methods=['POST'])
 def review_request():
     # TODO this
     return
@@ -81,22 +98,47 @@ def check_permission():
 
 @app.route('/request', methods=['POST'])
 def receive_requests():
-    # Identify permission level required to get file
-    jwtoken = request.args.get('jwt')
-    resource = request.args.get('resource')
+    # Get JWT authentification from HTTP header
+    jwtoken = request.headers['Authorization']
+    jwtoken = jwtoken.split()[1]
+    token_contents = decode_token(jwtoken)
+    
+    user = user_from_uid(token_contents['email'])
 
-    unique_name = get_unique_name(jwtoken)
+    resource = request.args['resource']
+    reason = request.args['reason']
+    duration = request.args['duration']
+    # TODO get ip
+    ip = '0.0.0.0'
 
-    if unique_name in users:
-        perms = users[unique_name]
+    if (result := search_permissions_for_resource(user.active_perms, resource)) != None:
+        return jsonify({
+            'status': 'ACTIVE',
+            'permission': result
+        })
+    
+    if (result := search_permissions_for_resource(user.persistent_perms, resource)) != None:
+        return jsonify({
+            'status': 'GRANTED',
+            'permission': result
+        })
+
+    if (result := search_permissions_for_resource(user.denied_perms, resource)) != None:
+        return jsonify({
+            'status': 'DENIED',
+            'permission': result
+        })
+
+    # TODO right now we don't check if resource is in requestable_resources because, with the UI, it should always be. but probably better idea to check
+    perm_request = PermissionRequest(resource, reason, duration, ip)
+    user.sent_requests.append(perm_request)
+
+    # TODO machine learning and heuristic stuff
+    if len(user.supervisors) != 0:
+        # Ask supervisors
+        for sup in user.supervisors:
+            sup.recieved_requests.append(perm_request)
     else:
-        return jsonify({'status': 'INVALID'})
-
-    response = {
-        'status': 'DENIED'
-    }
-    # Verifies permission level
-    if resource in permissions[perms]:
-        response['status'] = 'GRANTED'
-
-    return jsonify(response)
+        # Ask co-supervisors
+        for co in user.co_supervisors:
+            co.recieved_requests.append(perm_request)
