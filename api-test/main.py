@@ -116,7 +116,7 @@ class PermissionRequest:
     def __init__(self, requester_uid, resource, reason, duration, ip):
         self.id = PermissionRequest.next_id
         PermissionRequest.next_id += 1
-        self.requester_uid = request_uid
+        self.requester_uid = requester_uid
         self.resource = resource
         self.time_sent = get_current_time()
         self.reason = reason
@@ -135,7 +135,7 @@ class Log:
         if enabled == True:
             self.log_file = open(file_name, 'a')
         
-    def log(type, message):
+    def log(self, type, message):
         if self.enabled:
             time = datetime.now().strftime("[%Y/%m/%d %H:%M:%S]")
             self.log_file.write('{time} {type}: {message}\n')
@@ -186,7 +186,7 @@ def review_request():
     if request_reviewed == None:
         return Response(jsonify({'error': 'Invalid request id'}), status=403)
 
-    if not(request_reviewed in user.received_requests and request_reviewed in requester.sent_request):
+    if not(request_reviewed in user.received_requests and request_reviewed in request_reviewed.requester.sent_request):
         log.log("Error", f"Failed to remove request id {request_id} from received or sent requests in /review")
         return Response(jsonify({"error": "Couldn't find request id"}), status=403)
 
@@ -195,11 +195,11 @@ def review_request():
 
     new_permission = Permission(f'Access to {request_reviewed.resource}', request_reviewed.resource, request_reviewed.requester, expiry)
     if status == 'GRANTED':
-        log.log("Review", f"Permission request id {request_reviewed.id} to {request_reviewed.resource} granted from {user.first_name} {user_last_name} <{user.uid}>")
+        log.log("Review", f"Permission request id {request_reviewed.id} to {request_reviewed.resource} granted from {user.first_name} {user.last_name} <{user.uid}>")
         request_reviewed.requester.active_perms.append(new_permission)
     else:
         # TODO what do we do with that?
-        log.log("Review", f"Permission request id {request_reviewed.id} to {request_reviewed.resource} denied from {user.first_name} {user_last_name} <{user.uid}>")
+        log.log("Review", f"Permission request id {request_reviewed.id} to {request_reviewed.resource} denied from {user.first_name} {user.last_name} <{user.uid}>")
         new_permission.expiry_time = 0
         request_reviewed.requester.denied_perms.append(new_permission)
 
@@ -299,7 +299,7 @@ def receive_requests():
             if co != None:
                 co.received_requests.append(perm_request)
             else:
-                log.log("Error", f"Couldn't find co-supervisor from uid <{sup_uid}> for user {user.first_name} {user.last_name} <{user.uid}>")
+                log.log("Error", f"Couldn't find co-supervisor from uid <{co_uid}> for user {user.first_name} {user.last_name} <{user.uid}>")
 
     log.log("Request", f"Received pending request for {resource} from {user.first_name} {user.last_name} <{user.uid}>")
     return jsonify({
