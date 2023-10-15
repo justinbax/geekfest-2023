@@ -169,18 +169,14 @@ class Log:
         self.log_file = None
 
         if enabled == True:
-            self.log_file = open(file_name, 'a')
+            self.log_file = file_name
             self.log("Start", "Starting logging")
-
-    def __del__(self):
-        if self.enabled:
-            self.log("Exit", "Exiting logging")
-        close(self.log_file)
         
     def log(self, type, message):
-        if self.enabled:
-            time = datetime.now().strftime("[%Y/%m/%d %H:%M:%S]")
-            self.log_file.write(f'{time} {type}: {message}\n')
+        fil = open(self.log_file, 'a')
+        time = datetime.now().strftime("[%Y/%m/%d %H:%M:%S]")
+        fil.write(f'{time} {type}: {message}\n')
+        fil.close()
 
 
 log = Log(True, 'log.txt')
